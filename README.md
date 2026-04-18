@@ -15,6 +15,14 @@ Moderator Commands (admin only):
 9. /sendmsg - Sends message through bot.
 
 User Commands:
+*GIVEAWAY COMMANDS*
 1. /giveaways - Lists all the pending giveaways.
+*MUSIC COMMANDS*
+2. /play - Plays music (through YT URL).
+3. /queue - Shows queued music.
+4. /skip - Skips the music and moves to the next one in queue.
+5. /pause - Pauses the music.
+6. /resume - Resumes the music.
+7. /clear - Clears the queue.
 
 THIS BOT IS W.I.P.
