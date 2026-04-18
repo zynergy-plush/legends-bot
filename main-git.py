@@ -42,15 +42,11 @@ async def on_ready():
 async def help_cmd(interaction: discord.Interaction):
     embed = discord.Embed(title="📚 Bot Commands", description="All available commands:", color=0x0099FF)
     embed.add_field(
-        name="🎉 **Giveaway Commands**",
-        value="`giveaway` - Start giveaway\n`reroll` - Reroll winner\n`giveaways` - List active giveaways",
+        name="🎉 **Giveaways**",
+        value="`giveaways` - List active giveaways",
         inline=False
     )
-    embed.add_field(
-        name="🔨 **Moderation Commands**",
-        value="`ban` - Ban member\n`kick` - Kick member\n`timeout` - Timeout member\n`untimeout` - Remove timeout",
-        inline=False
-    )
+
     embed.set_footer(text="You used /help.")
     embed.timestamp = datetime.now(UTC)
     await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -64,6 +60,11 @@ async def adminhelp(interaction: discord.Interaction):
 
     embed = discord.Embed(title="🛡️ Admin‑Only Commands", color=0xFF6600)
     embed.add_field(
+        name="🎉 **Giveaways**",
+        value="`giveaway` - Start a giveaway\n`reroll` - Reroll a winner\n`giveaways` - List active giveaways",
+        inline=False
+    )
+    embed.add_field(
         name="👋 **Welcome / Goodbye**",
         value="`setwelcome` - Set welcome channel\n`setgoodbye` - Set goodbye channel",
         inline=False
@@ -71,6 +72,11 @@ async def adminhelp(interaction: discord.Interaction):
     embed.add_field(
         name="📢 **Messaging**",
         value="`sendmsg` - Send plain text message as bot",
+        inline=False
+    )
+    embed.add_field(
+        name="🔨 **Moderation Commands**",
+        value="`ban` - Ban member\n`kick` - Kick member\n`timeout` - Timeout member\n`untimeout` - Remove timeout",
         inline=False
     )
     embed.set_footer(text="You used /adminhelp.")
@@ -173,8 +179,8 @@ async def sendmsg(interaction: discord.Interaction, channel: discord.TextChannel
         await interaction.followup.send(f"❌ **Error sending message:** {str(e)}", ephemeral=True)
 
 
-# Give away command
-@tree.command(name="giveaway", description="🎉 Start a giveaway!")
+# Give away command (admin only)
+@tree.command(name="giveaway", description="🎉 Start a giveaway! (Admin only)")
 @app_commands.describe(
     duration="Duration: 1s, 5m, 1h, 1d",
     prize="What to give away?"
@@ -190,16 +196,20 @@ async def sendmsg(interaction: discord.Interaction, channel: discord.TextChannel
     app_commands.Choice(name="1 day", value="1d")
 ])
 async def giveaway(interaction: discord.Interaction, duration: str, prize: str):
+    if not is_admin(interaction):
+        await interaction.response.send_message("❌ **Admin only!**", ephemeral=True)
+        return
+
     await interaction.response.defer()
-    
+
     duration_seconds = parse_duration(duration)
     if duration_seconds is None:
         await interaction.followup.send("❌ **Invalid duration!** Use: 1s, 5m, 1h, 1d", ephemeral=True)
         return
-    
+
     now = datetime.now(UTC)
     end_time = now + timedelta(seconds=duration_seconds)
-    
+
     embed = discord.Embed(
         title="🎉 GIVEAWAY STARTED! 🎉",
         description=f"**{prize}**\n\n⏰ **{duration}**\n📅 **Ends:** <t:{int(end_time.timestamp())}:R>",
@@ -220,7 +230,7 @@ async def giveaway(interaction: discord.Interaction, duration: str, prize: str):
         'message': giveaway_msg,
         'participants': set()
     }
-    
+
     asyncio.create_task(end_giveaway_after(giveaway_id, duration_seconds))
     await interaction.followup.send(f"🎉 **Giveaway created!** Ends in `{duration}`")
 
@@ -301,36 +311,40 @@ async def untimeout(interaction: discord.Interaction, member: discord.Member):
     await interaction.followup.send(embed=embed)
 
 
-# Reroll giveaway winner
-@tree.command(name="reroll", description="🎲 Reroll a giveaway winner")
+# Reroll giveaway winner (Admin only)
+@tree.command(name="reroll", description="🎲 Reroll a giveaway winner (Admin only)")
 @app_commands.describe(message_id="Message ID of giveaway embed")
 async def reroll(interaction: discord.Interaction, message_id: str):
+    if not is_admin(interaction):
+        await interaction.response.send_message("❌ **Admin only!**", ephemeral=True)
+        return
+
     await interaction.response.defer()
-    
+
     try:
         msg_id = int(message_id)
         if msg_id not in giveaways:
             await interaction.followup.send("❌ **Giveaway not found!** Use `/giveaway` first.", ephemeral=True)
             return
-        
+
         giveaway = giveaways[msg_id]
         message = giveaway['message']
-        
+
         reaction = None
         for react in message.reactions:
             if str(react.emoji) == '🎉':
                 reaction = react
                 break
-        
+
         if not reaction or reaction.count < 2:
             await interaction.followup.send("❌ **No participants to reroll!**", ephemeral=True)
             return
-        
+
         users = [user async for user in reaction.users() if not user.bot]
         if len(users) < 2:
             await interaction.followup.send("❌ **Need 2+ participants for reroll!**", ephemeral=True)
             return
-        
+
         winner = random.choice(users)
         embed = discord.Embed(
             title="🎉 REROLLED WINNER! 🎉",
@@ -339,11 +353,11 @@ async def reroll(interaction: discord.Interaction, message_id: str):
         )
         embed.timestamp = datetime.now(UTC)
         await message.edit(embed=embed)
-        
+
         await interaction.followup.send(f"🎉 **Rerolled!** {winner.mention} is new winner!")
-        
+
     except ValueError:
-        await interaction.followup.send("❌ **Invalid message ID!** Right-click giveaway → Copy ID", ephemeral=True)
+        await interaction.followup.send("❌ **Invalid message ID!** Right‑click giveaway → Copy ID", ephemeral=True)
     except Exception as e:
         await interaction.followup.send(f"❌ **Error:** {str(e)}", ephemeral=True)
 
