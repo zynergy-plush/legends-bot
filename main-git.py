@@ -46,6 +46,11 @@ async def help_cmd(interaction: discord.Interaction):
         value="`giveaways` - List active giveaways",
         inline=False
     )
+    embed.add_field(
+        name="🙋🏻‍♂️ **help**",
+        value="`help` - Show all bot commands",
+        inline=False
+    )
 
     embed.set_footer(text="You used /help.")
     embed.timestamp = datetime.now(UTC)
@@ -86,25 +91,37 @@ async def adminhelp(interaction: discord.Interaction):
 
 # Welcome msg
 @client.event
+@client.event
 async def on_member_join(member):
     guild_id = str(member.guild.id)
-    if guild_id in welcome_channels and 'welcome' in welcome_channels[guild_id]:
-        channel_id = welcome_channels[guild_id]['welcome']
-        channel = member.guild.get_channel(channel_id)
-        if channel:
-            embed = discord.Embed(
-                title="👋 Welcome!",
-                description=f"**{member.mention}** joined the server! 👋🏻. We have reached **{member.guild.member_count}** members!",
-                color=0x00FF00
-            )
-            embed.set_thumbnail(url=member.display_avatar.url)
-            embed.timestamp = datetime.now(UTC)
-            await channel.send(embed=embed)
-            print(f"DEBUG: Welcome sent to {channel.name}")
-        else:
-            print(f"DEBUG: Welcome channel {channel_id} not found")
-    else:
-        print(f"DEBUG: Welcome channel not set for guild {guild_id}")
+    if guild_id in welcome_channels:
+        # Send welcome if welcome channel is set
+        if 'welcome' in welcome_channels[guild_id]:
+            channel_id = welcome_channels[guild_id]['welcome']
+            channel = member.guild.get_channel(channel_id)
+            if channel:
+                embed = discord.Embed(
+                    title="👋 Welcome!",
+                    description=f"**{member.mention}** joined the server! 👋🏻. We have reached **{member.guild.member_count}** members!",
+                    color=0x00FF00
+                )
+                embed.set_thumbnail(url=member.display_avatar.url)
+                embed.timestamp = datetime.now(UTC)
+                await channel.send(embed=embed)
+                print(f"DEBUG: Welcome sent to {channel.name}")
+            else:
+                print(f"DEBUG: Welcome channel {channel_id} not found")
+
+        # Give welcome role if set
+        if 'welcome_role' in welcome_channels[guild_id]:
+            role_id = welcome_channels[guild_id]['welcome_role']
+            role = member.guild.get_role(role_id)
+            if role is not None:
+                try:
+                    await member.add_roles(role)
+                    print(f"DEBUG: Role {role.name} given to {member}")
+                except discord.Forbidden:
+                    print("DEBUG: Cannot give role (missing permissions).")
 
 
 # Goodbye msg
@@ -131,19 +148,38 @@ async def on_member_remove(member):
 
 
 # Set welcome channel (Admin only)
-@tree.command(name="setwelcome", description="📢 Set welcome channel only (Admin only)")
-@app_commands.describe(channel="Channel for welcome messages")
-async def setwelcome(interaction: discord.Interaction, channel: discord.TextChannel):
+# Set welcome channel (Admin only, optional role on join)
+@tree.command(name="setwelcome", description="📢 Set welcome channel and optional role on join (Admin only)")
+@app_commands.describe(
+    channel="Channel for welcome messages",
+    role="Optional role to give to new members when they join"
+)
+async def setwelcome(interaction: discord.Interaction, channel: discord.TextChannel, role: discord.Role = None):
     if not is_admin(interaction):
         await interaction.response.send_message("❌ **Admin only!**", ephemeral=True)
         return
-    
+
     guild_id = str(interaction.guild.id)
     if guild_id not in welcome_channels:
         welcome_channels[guild_id] = {}
+
     welcome_channels[guild_id]['welcome'] = channel.id
+    if role is not None:
+        welcome_channels[guild_id]['welcome_role'] = role.id
+    else:
+        welcome_channels[guild_id].pop('welcome_role', None)
+
     print(f"DEBUG: Welcome channel set to {channel.id} for guild {guild_id}")
-    await interaction.response.send_message(f"✅ Welcome messages set to {channel.mention}", ephemeral=True)
+    if role:
+        await interaction.response.send_message(
+            f"✅ Welcome messages set to {channel.mention} and new members will get role {role.mention}",
+            ephemeral=True
+        )
+    else:
+        await interaction.response.send_message(
+            f"✅ Welcome messages set to {channel.mention}, no role will be given on join",
+            ephemeral=True
+        )
 
 
 # Set goodbye channel (Admin only)
@@ -444,4 +480,4 @@ async def on_reaction_add(reaction, user):
         pass    
 
 # BOT TOKEN 
-client.run('BOT_TOKEN_HERE')
+client.run('YOUR_BOT_TOKEN_HERE')
