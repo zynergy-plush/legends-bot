@@ -95,8 +95,32 @@ async def adminhelp(interaction: discord.Interaction):
         value="`ban` - Ban member\n`kick` - Kick member\n`timeout` - Timeout member\n`untimeout` - Remove timeout",
         inline=False
     )
+    embed.add_field(
+        name="⚙️ **Utility**",
+        value="`ping` - Check bot latency",
+        inline=False
+    )
     embed.set_footer(text="You used /adminhelp.")
     embed.timestamp = datetime.now(UTC)
+    await interaction.response.send_message(embed=embed, ephemeral=True)
+
+# Ping command
+@tree.command(name="ping", description="🏓 Check bot latency (Admin only)")
+async def ping(interaction: discord.Interaction):
+    if not is_admin(interaction):
+        await interaction.response.send_message("❌ **Admin only!**", ephemeral=True)
+        return
+    
+    latency = round(client.latency * 1000)
+    
+    embed = discord.Embed(
+        title="🏓 Pong!",
+        description=f"**{latency}ms**",
+        color=0x00FF00
+    )
+    embed.set_footer(text=f"Discord API: {round(interaction.client.latency * 1000)}ms")
+    embed.timestamp = datetime.now(UTC)
+    
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
 # Welcome and Goodbye messages
