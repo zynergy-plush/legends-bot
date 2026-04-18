@@ -10,11 +10,11 @@ Moderator Commands (admin only):
 4. /kick - Kicks a member.
 5. /timeout - Timeouts a member.
 6. /untimeout - Removes timeout from a member.
-7. /giveaway - Starts a giveaway. (Unique)
+7. /giveaway - Starts a giveaway.
 8. /adminhelp - Shows all commands for admins.
 9. /sendmsg - Sends message through bot.
 
 User Commands:
-1. giveaways - Lists all the pending giveaway.
+1. /giveaways - Lists all the pending giveaways.
 
 THIS BOT IS W.I.P.
