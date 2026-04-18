@@ -13,6 +13,7 @@ Moderator Commands (admin only):
 7. /giveaway - Starts a giveaway.
 8. /adminhelp - Shows all commands for admins.
 9. /sendmsg - Sends message through bot.
+10. /ping - Checks latency of the bot.
 
 User Commands:
 
