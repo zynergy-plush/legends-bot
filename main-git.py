@@ -54,7 +54,7 @@ async def help_cmd(interaction: discord.Interaction):
     )
     embed.add_field(
         name="🎵 **Music**",
-        value="`play` - Play/add to queue\n`queue` - Show queue\n`skip` - Skip\n`pause` - Pause\n`resume` - Resume\n`clear` - Clear queue",
+        value="`play` - Play/add to queue\n`queue` - Show queue\n`skip` - Skip\n`pause` - Pause\n`resume` - Resume\n`stop` - Stop\n`clear` - Clear queue",
         inline=False
     )
     embed.add_field(
