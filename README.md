@@ -4,7 +4,7 @@
 New Additions:
 
 Moderator Commands (admin only):
-1. /setwelcome - Sets Welcome channel.
+1. /setwelcome - Sets Welcome channel. (Optional - Adds a role upon joining server)
 2. /setgoodbye - Sets Goodbye channel.
 3. /ban - Bans a member.
 4. /kick - Kicks a member.
