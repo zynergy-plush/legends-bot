@@ -23,6 +23,7 @@ User Commands:
 4. /skip - Skips the music and moves to the next one in queue.
 5. /pause - Pauses the music.
 6. /resume - Resumes the music.
-7. /clear - Clears the queue.
+7. /stop - Stops the music and disconnects the bot.
+8. /clear - Clears the queue.
 
 THIS BOT IS W.I.P.
