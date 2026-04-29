@@ -24,7 +24,9 @@ giveaways = {}
 welcome_channels = {}
 voice_clients: dict[int, VoiceClient] = {}
 music_queues: dict[int, list] = {} 
-current_songs: dict[int, dict] = {} 
+current_songs: dict[int, dict] = {}
+bounty_channels = {}
+bounties = {} 
 
 # Helper function to check admin permissions
 def is_admin(interaction: discord.Interaction) -> bool:
@@ -74,7 +76,15 @@ async def adminhelp(interaction: discord.Interaction):
         await interaction.response.send_message("❌ **Admin only!**", ephemeral=True)
         return
 
+
+
     embed = discord.Embed(title="🛡️ Admin‑Only Commands", color=0xFF6600)
+
+    embed.add_field(
+        name="🎯 **Bounty System**",
+        value="`bounty` - Place bounty on user\n`setbountychannel` - Set bounty channel",
+        inline=False
+    )
     embed.add_field(
         name="🎉 **Giveaways**",
         value="`giveaway` - Start a giveaway\n`reroll` - Reroll a winner\n`giveaways` - List active giveaways",
@@ -686,6 +696,95 @@ async def pick_winner(giveaway_id: int):
     except Exception as e:
         print(f"Giveaway {giveaway_id} error: {e}")
 
+
+# BOUNTY COMMANDS #
+
+# Bounty
+
+@tree.command(name="bounty", description="🎯 Place a bounty on a user! (Admin only)")
+@app_commands.describe(user="Target user", reward="Bounty reward/amount")
+async def bounty(interaction: discord.Interaction, user: str, reward: str):
+    if not is_admin(interaction):
+        await interaction.response.send_message("❌ **Admin only!**", ephemeral=True)
+        return
+
+    guild_id = str(interaction.guild.id)
+    
+    # Check if bounty channel is set
+    if guild_id not in bounty_channels:
+        await interaction.response.send_message(
+            "❌ **No bounty channel set!** Use `/setbounty` first.", 
+            ephemeral=True
+        )
+        return
+    
+    channel_id = bounty_channels[guild_id]['channel_id']
+    channel = interaction.guild.get_channel(channel_id)
+    if not channel:
+        await interaction.response.send_message(
+            f"❌ **Bounty channel {channel_id} not found!**", 
+            ephemeral=True
+        )
+        return
+
+    await interaction.response.defer(ephemeral=True)
+
+    embed = discord.Embed(
+        title="🎯 NEW BOUNTY!",
+        description=f"**Target:** `{user}`\n💰 **Reward:** `{reward}`\n👮 **Posted by:** {interaction.user.mention}",
+        color=0xFF4444
+    )
+    embed.timestamp = datetime.now(UTC)
+    embed.add_field(
+        name="📝 Instructions", 
+        value="Submit screenshots/evidence in this channel!\nFirst valid submission wins the bounty.", 
+        inline=False
+    )
+
+    try:
+        bounty_msg = await channel.send(embed=embed)
+        bounties[bounty_msg.id] = {
+            'target_user': user,  
+            'reward': reward,
+            'host': interaction.user,
+            'message': bounty_msg,
+            'claimed': False
+        }
+        
+        await interaction.followup.send(
+            f"✅ **Bounty placed!** {bounty_msg.jump_url}\n🎯 Target: `{user}`\n💰 Reward: `{reward}`"
+        )
+    except Exception as e:
+        await interaction.followup.send(f"❌ **Error posting bounty:** {str(e)}", ephemeral=True)
+
+@tree.command(name="setbountychannel", description="⚙️ Set bounty submission channel (Admin only)")
+@app_commands.describe(
+    channel="Channel for bounty submissions", 
+    target_user="Optional: Auto-forward submissions to this user"
+)
+async def setbountychannel(interaction: discord.Interaction, channel: discord.TextChannel, target_user: Optional[discord.Member] = None):
+    if not is_admin(interaction):
+        await interaction.response.send_message("❌ **Admin only!**", ephemeral=True)
+        return
+
+    guild_id = str(interaction.guild.id)
+    
+    if guild_id not in bounty_channels:
+        bounty_channels[guild_id] = {}
+    
+        bounty_channels[guild_id]['channel_id'] = channel.id
+        bounty_channels[guild_id]['target_user_id'] = target_user.id if target_user else None
+        
+        status = f"{channel.mention}"
+        if target_user:
+            status += f" (forwards to {target_user.mention})"
+        
+        await interaction.response.send_message(
+            f"✅ **Bounty channel set!**\n{status}", 
+            ephemeral=True
+        )
+        print(f"DEBUG: Bounty channel set to {channel.id} for guild {guild_id}, target_user: {target_user.id if target_user else 'None'}")
+
 # Reaction handler
 @client.event
 async def on_reaction_add(reaction, user):
@@ -694,6 +793,77 @@ async def on_reaction_add(reaction, user):
     try:
         await reaction.remove(user)
     except:
-        pass    
+        pass
 
-client.run('YOUR-BOT-TOKEN-HERE')
+@client.event
+async def on_message(message):
+    
+    if message.author.bot:
+        return
+    
+    guild_id = str(message.guild.id)
+
+    if guild_id in bounty_channels:
+        channel_id = bounty_channels[guild_id].get('channel_id')
+        if message.channel.id == channel_id and message.attachments:
+            
+            
+            for bounty_id, bounty_data in bounties.items():
+                if not bounty_data['claimed'] and bounty_data['message'].channel.id == channel_id:
+                    # Auto-claim first valid screenshot submission
+                    target_user_id = bounty_channels[guild_id].get('target_user_id')
+                    
+                   
+                    bounty_data['claimed'] = True
+                    
+                    
+                    embed = discord.Embed(
+                        title="✅ BOUNTY CLAIMED!",
+                        description=f"**Winner:** {message.author.mention}\n"
+                                  f"**Target:** `{bounty_data['target_user']}`\n"
+                                  f"**Reward:** `{bounty_data['reward']}`\n"
+                                  f"**Submitted by:** {message.author.mention}",
+                        color=0x00FF00
+                    )
+                    embed.timestamp = datetime.now(UTC)
+                    await bounty_data['message'].edit(embed=embed)
+                    
+                    
+                    host = bounty_data['host']
+                    try:
+                        await host.send(f"🎉 **Bounty claimed!**\n{ message.author.mention } submitted evidence for `{bounty_data['target_user']}`\n"
+                                      f"Reward: `{bounty_data['reward']}`\n"
+                                      f"[View submission]({message.jump_url})")
+                    except:
+                        pass  
+                    
+                    
+                    if target_user_id:
+                        try:
+                            target_user = message.guild.get_member(target_user_id)
+                            if target_user:
+                                forward_embed = discord.Embed(
+                                    title="🎯 Evidence Submitted",
+                                    description=f"**Submitter:** {message.author.mention}\n"
+                                              f"**Bounty:** `{bounty_data['reward']}`\n"
+                                              f"**Target:** `{bounty_data['target_user']}`\n"  # Plain text!
+                                              f"**Evidence:** {len(message.attachments)} attachment(s)",
+                                    color=0xFFAA00
+                                )
+                                await target_user.send(embed=forward_embed)
+                                for attachment in message.attachments:
+                                    await target_user.send(attachment.url)
+                        except:
+                            print(f"DEBUG: Could not DM target user {target_user_id}")
+                    
+                    
+                    await message.reply(f"✅ **Bounty claimed by {message.author.mention}!** "
+                                      f"Target: `{bounty_data['target_user']}`\n"
+                                      f"Reward: `{bounty_data['reward']}`\n"
+                                      f"Contact {bounty_data['host'].mention} to claim.")
+                    break
+    
+    await client.process_commands(message)    
+
+client.run('BOT_TOKEN_HERE')
+
