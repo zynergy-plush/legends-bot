@@ -6,14 +6,16 @@ New Additions:
 Moderator Commands (admin only):
 1. /setwelcome - Sets Welcome channel. (Optional - Adds a role upon joining server)
 2. /setgoodbye - Sets Goodbye channel.
-3. /ban - Bans a member.
-4. /kick - Kicks a member.
-5. /timeout - Timeouts a member.
-6. /untimeout - Removes timeout from a member.
-7. /giveaway - Starts a giveaway.
-8. /adminhelp - Shows all commands for admins.
-9. /sendmsg - Sends message through bot.
-10. /ping - Checks latency of the bot.
+3. /setbountychannel - sets bounty channel where bounties are posted
+4. /ban - Bans a member.
+5. /kick - Kicks a member.
+6. /timeout - Timeouts a member.
+7. /untimeout - Removes timeout from a member.
+8. /giveaway - Starts a giveaway.
+9. /adminhelp - Shows all commands for admins.
+10. /sendmsg - Sends message through bot.
+11. /ping - Checks latency of the bot.
+12. /bounty - Sets a bounty on a user.
 
 User Commands:
 
